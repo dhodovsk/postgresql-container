@@ -119,19 +119,19 @@ function postgresql_master_addr() {
 # additional custom settings and is included from $PGDATA/postgresql.conf.
 function generate_postgresql_config() {
   envsubst \
-      < "${CONTAINER_SCRIPTS_PATH}/openshift-custom-postgresql.conf.template" \
+      < "${CONTAINER_SCRIPTS_PATH}/postgresql/openshift-custom-postgresql.conf.template" \
       > "${POSTGRESQL_CONFIG_FILE}"
 
   if [ "${ENABLE_REPLICATION}" == "true" ]; then
     envsubst \
-        < "${CONTAINER_SCRIPTS_PATH}/openshift-custom-postgresql-replication.conf.template" \
+        < "${CONTAINER_SCRIPTS_PATH}/postgresql/openshift-custom-postgresql-replication.conf.template" \
         >> "${POSTGRESQL_CONFIG_FILE}"
   fi
 }
 
 function generate_postgresql_recovery_config() {
   envsubst \
-      < "${CONTAINER_SCRIPTS_PATH}/openshift-custom-recovery.conf.template" \
+      < "${CONTAINER_SCRIPTS_PATH}/postgresql/openshift-custom-recovery.conf.template" \
       > "${POSTGRESQL_RECOVERY_FILE}"
 }
 
