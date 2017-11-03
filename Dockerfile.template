@@ -13,6 +13,7 @@ FROM {{ config.docker.from }}
 ENV POSTGRESQL_VERSION={{ spec.version }} \
     POSTGRESQL_PREV_VERSION={{ spec.prev_version }} \
     HOME=/var/lib/pgsql \
+    APP_DATA=/opt/app-root \
     PGUSER=postgres
 
 ENV SUMMARY="PostgreSQL is an advanced Object-Relational database management system" \
@@ -26,6 +27,7 @@ LABEL summary=$SUMMARY \
       io.k8s.display-name="PostgreSQL {{ spec.version }}" \
       io.openshift.expose-services="5432:postgresql" \
       io.openshift.tags="{{ spec.openshift_tags }}" \
+      io.openshift.s2i.scripts-url="image:///usr/local/s2i" \
       name="{{ spec.common_image_name }}" \
       com.redhat.component="{{ spec.redhat_component }}" \
 {%- if spec.version in spec.rhscl3_introduced %}
@@ -59,14 +61,21 @@ RUN {{ spec.environment_setup }}
     localedef -f UTF-8 -i en_US en_US.UTF-8 && \
     test "$(id postgres)" = "uid=26(postgres) gid=26(postgres) groups=26(postgres)" && \
     mkdir -p /var/lib/pgsql/data && \
+    mkdir -p ${APP_DATA}/src && \
     /usr/libexec/fix-permissions /var/lib/pgsql && \
-    /usr/libexec/fix-permissions /var/run/postgresql
+    /usr/libexec/fix-permissions ${APP_DATA}/ && \
+    /usr/libexec/fix-permissions /var/run/postgresql && \
+    usermod -a -G root postgres
 
 # Get prefix path and path to scripts rather than hard-code them in scripts
 ENV CONTAINER_SCRIPTS_PATH=/usr/share/container-scripts/postgresql \
     ENABLED_COLLECTIONS={{ spec.enabled_collection }}
 
 COPY root /
+
+COPY ./s2i/bin/ /usr/local/s2i
+
+WORKDIR ${APP_DATA}/src
 
 # When bash is started non-interactively, to run a shell script, for example it
 # looks for this variable and source the content of this file. This will enable
