@@ -246,7 +246,7 @@ with configuration in `~/image-configuration/` run:
 
 
 ```
-$ s2i build ~/image-configuration/ postgresql new-postgresql
+$ s2i build --assemble-user root ~/image-configuration/ postgresql new-postgresql
 ```
 
 The directory passed to `s2i build` should contain one or more of the
