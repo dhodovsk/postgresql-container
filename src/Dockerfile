@@ -1,4 +1,4 @@
-FROM centos/s2i-core-centos7
+FROM {{ spec.s2i_base }}
 
 # PostgreSQL image for OpenShift.
 # Volumes:
@@ -10,8 +10,8 @@ FROM centos/s2i-core-centos7
 #  * $POSTGRESQL_ADMIN_PASSWORD (Optional) - Password for the 'postgres'
 #                           PostgreSQL administrative account
 
-ENV POSTGRESQL_VERSION=9.6 \
-    POSTGRESQL_PREV_VERSION=9.5 \
+ENV POSTGRESQL_VERSION={{ spec.version }} \
+    POSTGRESQL_PREV_VERSION={{ spec.prev_version }} \
     HOME=/var/lib/pgsql \
     PGUSER=postgres \
     APP_DATA=/opt/app-root
@@ -24,12 +24,16 @@ create, run, maintain and access a PostgreSQL DBMS server."
 LABEL summary=$SUMMARY \
       description="$DESCRIPTION" \
       io.k8s.description="$DESCRIPTION" \
-      io.k8s.display-name="PostgreSQL 9.6" \
+      io.k8s.display-name="PostgreSQL {{ spec.version }}" \
       io.openshift.expose-services="5432:postgresql" \
-      io.openshift.tags="database,postgresql,postgresql96,rh-postgresql96" \
-      name="centos/postgresql-96-centos7" \
-      com.redhat.component="rh-postgresql96-docker" \
-      version="9.6" \
+      io.openshift.tags="{{ spec.openshift_tags }}" \
+      name="{{ spec.org }}/postgresql-{{ spec.short }}-{{ spec.prod }}" \
+      com.redhat.component="{{ spec.redhat_component }}" \
+{%- if spec.version in spec.rhscl3_introduced %}
+      version="1" \
+{%- else %}
+      version="{{ spec.version }}" \
+{%- endif %}
       usage="docker run -d --name postgresql_database -e POSTGRESQL_USER=user -e POSTGRESQL_PASSWORD=pass -e POSTGRESQL_DATABASE=db -p 5432:5432 centos/postgresql-96-centos7" \
       maintainer="SoftwareCollections.org <sclorg@redhat.com>"
 
@@ -40,8 +44,14 @@ COPY root/usr/libexec/fix-permissions /usr/libexec/fix-permissions
 # This image must forever use UID 26 for postgres user so our volumes are
 # safe in the future. This should *never* change, the last test is there
 # to make sure of that.
-RUN yum install -y centos-release-scl-rh && \
-    INSTALL_PKGS="rsync tar gettext bind-utils nss_wrapper rh-postgresql96 rh-postgresql96-postgresql-contrib rh-postgresql95-postgresql-server" && \
+{%- if spec.repo_enable_reason %}
+{{ spec.repo_enable_reason }}
+{%- endif %}
+RUN {{ spec.environment_setup }}
+{%- if not spec.stable and spec.staging_repo_setup %}
+{{ spec.staging_repo_setup }}
+{%- endif %}
+    INSTALL_PKGS="rsync tar gettext bind-utils nss_wrapper {{ spec.pkgs }}" && \
     yum -y --setopt=tsflags=nodocs install $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
     yum clean all && \
@@ -53,7 +63,7 @@ RUN yum install -y centos-release-scl-rh && \
 
 # Get prefix path and path to scripts rather than hard-code them in scripts
 ENV CONTAINER_SCRIPTS_PATH=/usr/share/container-scripts/postgresql \
-    ENABLED_COLLECTIONS=rh-postgresql96
+    ENABLED_COLLECTIONS={{ spec.enabled_collection }}
 
 COPY root /
 COPY ./s2i/bin/ $STI_SCRIPTS_PATH
